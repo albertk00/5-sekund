@@ -580,6 +580,55 @@
             }
         }
 
+        // Short click per second (4,3,2,1)
+        function clickSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.value = 1200; // click-ish
+                gain.gain.value = 0.0001;
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+
+                // very short pluck envelope
+                gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + 0.005);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+
+                osc.stop(ctx.currentTime + 0.085);
+                osc.onended = () => ctx.close();
+            } catch (e) {}
+        }
+
+        // Pronounced final sound at 0s
+        function finalSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const bend = ctx.createGain(); // simple pitch bend via detune
+
+                osc.type = 'triangle';
+                osc.frequency.value = 750; // fuller tone
+                gain.gain.value = 0.0001;
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+
+                // attack/decay envelope
+                gain.gain.linearRampToValueAtTime(0.22, ctx.currentTime + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+
+                // gentle upward bend
+                osc.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.15);
+
+                osc.stop(ctx.currentTime + 0.52);
+                osc.onended = () => ctx.close();
+            } catch (e) {}
+        }
+
         function setCountdownText(msLeft) {
             const sec = Math.ceil(msLeft / 1000);
             document.getElementById('countdown').innerText = `${sec}s`;
@@ -603,16 +652,26 @@
             const start = performance.now();
             setCountdownText(total);
 
+            // Track whole-second transitions to play sounds
+            let lastWholeSec = 5;
+
             timerId = requestAnimationFrame(function tick(now) {
                 const elapsed = now - start;
                 const left = Math.max(0, total - elapsed);
+                const sec = Math.ceil(left / 1000);
+
+                // Play click at 4→3→2→1 transitions
+                if (sec < lastWholeSec && sec > 0) {
+                    clickSound();
+                }
                 setCountdownText(left);
+                lastWholeSec = sec;
 
                 if (left > 0) {
                     timerId = requestAnimationFrame(tick);
                 } else {
-                    // Done
-                    beep();
+                    // Final sound at 0
+                    finalSound();
                     document.getElementById('countdown').innerText = '0s';
                     clockBtn.classList.remove('clock-running', 'disabled');
                     clockBtn.disabled = false;
