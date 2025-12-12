@@ -204,6 +204,70 @@
             backdrop-filter: blur(2px);
         }
 
+        /* Timer container */
+        .timer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 14px;
+            color: #fff;
+        }
+        .countdown {
+            min-width: 56px;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        /* Clock button */
+        .clock-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.65);
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+            transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+        }
+        .clock-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(0,0,0,0.45); }
+        .clock-btn:active { transform: translateY(0); }
+        .clock-btn.disabled { cursor: not-allowed; opacity: 0.6; }
+        /* Clock face ticks */
+        .clock-btn::before {
+            content: "";
+            position: absolute;
+            inset: 6px;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at 50% 6%, rgba(255,255,255,0.75) 0 2px, transparent 3px),
+                radial-gradient(circle at 6% 50%, rgba(255,255,255,0.6) 0 2px, transparent 3px),
+                radial-gradient(circle at 50% 94%, rgba(255,255,255,0.6) 0 2px, transparent 3px),
+                radial-gradient(circle at 94% 50%, rgba(255,255,255,0.6) 0 2px, transparent 3px);
+            opacity: 0.8;
+        }
+        /* Clock hand */
+        .hand {
+            position: absolute;
+            width: 2px;
+            height: 22px;
+            background: #ffca28;
+            top: 12px;
+            left: 50%;
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(0deg);
+            filter: drop-shadow(0 0 6px rgba(255,202,40,0.65));
+        }
+        /* Animate hand for 5s sweep */
+        .clock-running .hand {
+            animation: sweep 5s linear forwards;
+        }
+        @keyframes sweep {
+            from { transform: translateX(-50%) rotate(0deg); }
+            to   { transform: translateX(-50%) rotate(360deg); }
+        }
+
         @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes fadeInUp { 0% { transform: translateY(12px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
         @keyframes pulseGlow {
@@ -315,6 +379,14 @@
         <div id="sentence">Naciśnij przycisk ↓</div>
         <button id="newBtn" onclick="showRandom()">Losuj</button>
         <button id="resetBtn" onclick="resetGame()">Resetuj</button>
+
+        <!-- 5s Timer UI -->
+        <div class="timer">
+            <button id="clockBtn" class="clock-btn" aria-label="Start 5s timer">
+                <span class="hand"></span>
+            </button>
+            <div id="countdown" class="countdown">5s</div>
+        </div>
     </div>
 
     <script>
@@ -479,6 +551,94 @@
                 document.getElementById('newBtn').disabled = true;
             }
         }
+
+        // Timer state
+        let timerActive = false;
+        let timerId = null;
+
+        // WebAudio beep
+        function beep() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = 880; // A5
+                gain.gain.value = 0.0001; // start near zero to avoid pop
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+
+                // quick envelope
+                gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+
+                osc.stop(ctx.currentTime + 0.26);
+                osc.onended = () => ctx.close();
+            } catch (e) {
+                // silent fail if audio not allowed
+            }
+        }
+
+        function setCountdownText(msLeft) {
+            const sec = Math.ceil(msLeft / 1000);
+            document.getElementById('countdown').innerText = `${sec}s`;
+        }
+
+        function startTimer() {
+            if (timerActive) return;
+            timerActive = true;
+
+            const clockBtn = document.getElementById('clockBtn');
+            const newBtn = document.getElementById('newBtn');
+            const resetBtn = document.getElementById('resetBtn');
+
+            // Disable actions during countdown
+            clockBtn.classList.add('clock-running', 'disabled');
+            clockBtn.disabled = true;
+            newBtn.disabled = true;
+            resetBtn.disabled = true;
+
+            const total = 5000;
+            const start = performance.now();
+            setCountdownText(total);
+
+            timerId = requestAnimationFrame(function tick(now) {
+                const elapsed = now - start;
+                const left = Math.max(0, total - elapsed);
+                setCountdownText(left);
+
+                if (left > 0) {
+                    timerId = requestAnimationFrame(tick);
+                } else {
+                    // Done
+                    beep();
+                    document.getElementById('countdown').innerText = '0s';
+                    clockBtn.classList.remove('clock-running', 'disabled');
+                    clockBtn.disabled = false;
+                    // Re-enable buttons depending on pool
+                    newBtn.disabled = pool.length === 0;
+                    resetBtn.disabled = false;
+                    timerActive = false;
+                }
+            });
+        }
+
+        // Hook up clock press
+        document.getElementById('clockBtn').addEventListener('click', startTimer);
+
+        // Keep countdown text in sync after reset
+        const originalReset = resetGame;
+        resetGame = function() {
+            originalReset();
+            document.getElementById('countdown').innerText = '5s';
+            // Allow clock again
+            const clockBtn = document.getElementById('clockBtn');
+            clockBtn.classList.remove('clock-running', 'disabled');
+            clockBtn.disabled = false;
+            timerActive = false;
+            if (timerId) { cancelAnimationFrame(timerId); timerId = null; }
+        };
 
         // Welcome overlay logic
         const welcome = document.getElementById('welcome');
