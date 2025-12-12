@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Sentence</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #f5f5f5;
+            overflow: hidden; /* prevent scroll while overlay active */
+        }
+        /* Welcome overlay */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(180deg, #0b1b2b 0%, #123b4a 100%);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 500ms ease, transform 500ms ease;
+        }
+        .overlay.hidden {
+            opacity: 0;
+            transform: scale(1.02);
+            pointer-events: none;
+        }
+        .title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-shadow: 0 4px 14px rgba(255,255,255,0.25);
+            margin-bottom: 16px;
+            animation: popIn 800ms ease both;
+        }
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 28px;
+            animation: fadeInUp 900ms ease 200ms both;
+        }
+        .cta {
+            padding: 12px 20px;
+            font-size: 1rem;
+            border: none;
+            border-radius: 10px;
+            background: #E53935;
+            color: #fff;
+            box-shadow: 0 6px 20px rgba(229,57,53,0.45);
+            cursor: pointer;
+            transform: translateY(0);
+            transition: transform 200ms ease, box-shadow 200ms ease, background 200ms ease;
+            animation: fadeInUp 900ms ease 400ms both;
+        }
+        .cta:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(229,57,53,0.55); background: #D32F2F; }
+        .cta:active { transform: translateY(0); }
+
+        /* Snowflakes */
+        .snow { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+        .flake { position: absolute; top: -10vh; color: #fff; opacity: 0.8; font-size: 1.2rem; animation: fall linear forwards; }
+        @keyframes fall {
+            0% { transform: translateY(-10vh) translateX(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.8; }
+            100% { transform: translateY(110vh) translateX(20px) rotate(360deg); opacity: 0.9; }
+        }
+        @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes fadeInUp { 0% { transform: translateY(12px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+
+        /* Main app styles */
+        #box {
+            width: 90%;
+            max-width: 400px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 400ms ease, opacity 400ms ease;
+        }
+        #sentence { font-size: 1.3rem; margin-bottom: 20px; }
+        button { padding: 12px 20px; font-size: 1rem; border: none; border-radius: 8px; background: #007AFF; color: white; cursor: pointer; }
+        /* Small reset button style */
+        #resetBtn { margin-top: 10px; padding: 8px 12px; font-size: 0.9rem; background: #6c757d; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <!-- Welcome overlay -->
+    <div id="welcome" class="overlay">
+        <div class="snow" aria-hidden="true">
+            <!-- minimal flakes -->
+            <span class="flake" style="left:5%; animation-duration: 8s; animation-delay: 0s;">✦</span>
+            <span class="flake" style="left:20%; animation-duration: 9s; animation-delay: 1s;">❄</span>
+            <span class="flake" style="left:35%; animation-duration: 7s; animation-delay: 0.5s;">✦</span>
+            <span class="flake" style="left:50%; animation-duration: 10s; animation-delay: 0.8s;">❄</span>
+            <span class="flake" style="left:65%; animation-duration: 9.5s; animation-delay: 0.2s;">✦</span>
+            <span class="flake" style="left:80%; animation-duration: 8.5s; animation-delay: 1.2s;">❄</span>
+            <span class="flake" style="left:92%; animation-duration: 7.5s; animation-delay: 0.7s;">✦</span>
+        </div>
+        <h1 class="title">Masz 5 sekund!</h1>
+        <div class="subtitle">Świąteczna rozgrywka rodzinna</div>
+        <button class="cta" id="continueBtn">Kontynuuj</button>
+    </div>
+
+    <div id="box">
+        <div id="sentence">Tap the button ↓</div>
+        <button id="newBtn" onclick="showRandom()">New Sentence</button>
+        <button id="resetBtn" onclick="resetGame()">Reset</button>
+    </div>
+
+    <script>
+        const sentences = [
+            "Wymień 3 przedmioty w pokoju Stacha",
+            "Wymień 3 przedmioty w pokoju Misi",
+            "Wymień 3 przedmioty w pokoju Rodziców",
+            "Wymień 3 produkty, które teraz są w lodówce",
+            "Ile jest krzeseł w domu (możesz pomylić się o 2)",
+            "Wymień 3 cechy charakteru Stacha",
+            "Wymień 3 cechy charakteru Alberta",
+            "Wymień 3 cechy charakteru Misi",
+            "Wymień 3 cechy charakteru Taty",
+            "Wymień 3 cechy charakteru Mamy",
+            "Ile figurek stoi na kominku (możesz pomylić się o 2)",
+            "Ile kilometrów jest do lasu (możesz pomylić się o 5)",
+            "Ile samochodów miała Mama",
+            "Ile samochodów miał Albert",
+            "Ile samochodów miał Tata",
+            "Ile palców kotów jest obecnie w domu",
+            "Wymień trzy rzeczy, których nie powinno się wlewać do zbiornika na płyn chłodniczy",
+            "Wymień 3 ulubione sklepy Mamy",
+            "Wymień 3 państwa, w których rodzice jeszcze nie byli",
+            "Wymień 3 państwa, w których Albert I Misia byli razem",
+            "Wymień 3 restauracje w Poznaniu",
+            "Wymień 3 koleżanki Misi",
+            "Wymień 3 kolegów Wojtka",
+            "Wymień 3 kolegów Stasia",
+            "Wymień 3 kolegów Alberta",
+            "Wymień 3 zasady wkładania naczyń do zmywarki",
+            "Wymień 3 miejsca, na których byliśmy na wakacjach rodzinnych",
+            "Wymień 3 aktywności niedzielne Taty",
+            "Wymień 3 aktywności niedzielne Mamy",
+            "Wymień 3 najlepsze potrawy Mamy",
+            "Wymień 3 plany na przyszłość Alberta",
+            "Wymień 3 plany na przyszłość Stasia",
+            "Ile lat zostało Tacie do emerytury (możesz pomylić się o 2)",
+            "Wymień wszystkie kierunki studiów, na którch była Misia",
+            "Wymień 3 plusy mieszkania w piwnicy",
+            "Wymień 3 minusy mieszkania w piwnicy",
+            "Wymień 3 aktorki, do których podobna jest Misia",
+            "Wymień 3 fryzury, które miała Mama",
+            "Wymień 3 ulubione drużyny piłkarskie Stasia",
+            "Wymień 3 ulubione drużyny piłkarskie Taty",
+            "Wymień 3 miejsca, z których mamy kubek na espresso",
+            "Ile przycisków jest na ekspresie do kawy",
+            "Wymień 3 rzeczy, których nie można robić w kuchni",
+            "Ile zdjęć wisi na ścianie, nad kanapą w salonie (możesz pomylić się o 3)",
+            "Wymień 3 metody wychowawcze rodziców",
+            "Wymień 3 sposoby na otworzenie domu jak nie masz kluczy",
+            "Wymień 3 sposoby na popsucie auta mamy",
+            "Wymień 3 miasta, w których mieszkał Albert",
+            "Wymień imiona 3 sióstr Alberta",
+            "Podaj numer buta Stasia",
+            "Podaj numer buta Taty",
+            "Podaj numer buta Misi",
+            "Podaj numer buta Mamy",
+            "Podaj numer buta Alberta",
+            "Wymień 3 ulubione aktywności Babci Ani",
+            "Wymień 3 ulubione aktywności Babci Ewy",
+            "Wymień 3 hobby Alberta",
+            "Wymień 3 gry, w które gra Stasiu",
+            "Wymień 3 kuzynów Stasia i Misi",
+            "Wymień 3 zdania, które najczęściej mówi Misia",
+            "Wymień 3 zdania, które najczęściej mówi Stasiu",
+            "Wymień 3 zdania, które najczęściej mówi Mama",
+            "Wymień 3 zdania, które najczęściej mówi Tata",
+            "Wymień 3 zdania, które najczęściej mówi Dziadek",
+            "Wymień 3 zdania, które najczęściej mówi Babcia Ania",
+            "Wymień 3 zdania, które najczęściej mówi Babcia Ewa",
+            "Wymień 3 role, które zagrała Misia",
+            "Wymień 3 firmy, w których pracował Albert",
+            "Wymień 3 firmy, w których pracował Tata",
+            "Wymień 3 firmy, w których pracowała Mama",
+            "Wymień 3 składniki, z których śniadanie robi Stasiu",
+            "Wymień 3 składniki, z których śniadanie robi Misia",
+            "Wymień 3 składniki, z których śniadanie robi Tata",
+            "Wymień 3 składniki, z których śniadanie robi Mama",
+            "Wymień 3 składniki, z których śniadanie robi Albert",
+            "Wymień 3 rzeczy, które Misia wyniosłaby z pożaru jako pierwsze",
+            "Wymień 3 rzeczy, które Mama wyniosłaby z pożaru jako pierwsze",
+            "Wymień 3 rzeczy, które Stasiu wyniósłby z pożaru jako pierwsze",
+            "Wymień 3 rzeczy, które Tata wyniósłby z pożaru jako pierwsze",
+            "Wymień 3 rzeczy, które Albert wyniósłby z pożaru jako pierwsze",
+            "Wymień 3 rzeczy, których nie spodziewa się teraz Misia",
+            "Wymień 3 rzeczy, których nie spodziewa się teraz Mama",
+            "Wymień 3 rzeczy, których nie spodziewa się teraz Tata",
+            "Wymień 3 rzeczy, których nie spodziewa się teraz Stasiu",
+            "Wymień 3 rzeczy, których nie spodziewa się teraz Albert",
+            "Wymień 3 rzeczy, które rymują się z Brzuska",
+            "Wymień 3 rzeczy, które rymują się z Albert",
+            "Wymień 3 rzeczy, które rymują się z Stasiu",
+            "Wymień 3 rzeczy, które rymują się z Ala",
+            "Wymień 3 rzeczy, które rymują się z Wojtek",
+            "Wymień 3 rzeczy, które rymują się z Kloc",
+            "Wymień 3 rzeczy, których definicji nie zna Tata",
+            "Wymień 3 rzeczy, których definicji nie zna Mama",
+            "Wymień 3 rzeczy, których definicji nie zna Misia",
+            "Wymień 3 rzeczy, których definicji nie zna Stasiu",
+            "Wymień 3 rzeczy, których definicji nie zna Albert",
+            "Powiedz jak nazywałaby się biografia Alberta",
+            "Powiedz jak nazywałaby się biografia Stasia",
+            "Powiedz jak nazywałaby się biografia Taty",
+            "Powiedz jak nazywałaby się biografia Mamy",
+            "Powiedz jak nazywałaby się biografia Misi",
+            "Powiedz ile jest książek na półce w domu (możesz pomylić się o dwie)",
+            "Powiedz ile jest schodów w domu (możesz pomylić się o dwa)",
+            "Powiedz ile jest grafik, obrazów w domu (możesz się pomylić o dwa)",
+            "Powiedz ile jest okien w domu (możesz się pomylić o dwa)",
+            "Powiedz ile jest geniuszów w domu (możesz się pomylić o dwa)",
+            "Powiedz ile jest naturalnych talentów w domu (możesz się pomylić o dwa)",
+            "Powiedz ile jest ofiar losu w domu (możesz się pomylić o dwa)",
+            "Powiedz ile jest łamag w domu (możesz się pomylić o dwa)",
+            "Powiedz ile razy miesięcznie używa się sauny (możesz pomylić się o dwa)",
+            "Wymień 3 powody, dla których Misia i Albert są dla siebie idealni",
+            "Wymień 3 powody, dla których Misia i Stasiu są siblings goals",
+            "Wymień 3 powody, dla których Mama i Tata są dla siebie idealni",
+            "Wymień 3 powody, dla których Stasiu i Albert są dla siebie idealni",
+            "Wymień 3 najlepsze miejsca na Cytadeli",
+            "Wymień 3 sposoby na zabicie czasu w korku do pociągu przez góry w Austrii",
+            "Wymień 3 ustawy, które przeszły bez wiedzy Taty",
+            "Wymień 3 osoby mądrzejsze od Hugo",
+            "Wymień 3 wady wakacji na jachcie",
+            "Wymień 3 przedmioty na studiach Stasia",
+            "Wymień 3 przedmioty na studiach Misi",
+            "Wymień 3 aktywności podczas wyjazdu na narty",
+            "Wymień 3 sposoby na szybkie sprzątanie po imprezie sylwestrowej"
+        ];
+
+        // Shrinking pool to avoid repeats
+        let pool = [];
+        function resetGame() {
+            pool = sentences.slice();
+            document.getElementById('newBtn').disabled = false;
+            document.getElementById('sentence').innerText = 'Tap the button ↓';
+        }
+
+        // Initialize on load
+        resetGame();
+
+        function showRandom() {
+            if (pool.length === 0) {
+                document.getElementById('sentence').innerText = 'No more sentences. Press Reset.';
+                document.getElementById('newBtn').disabled = true;
+                return;
+            }
+            const idx = Math.floor(Math.random() * pool.length);
+            const picked = pool.splice(idx, 1)[0]; // remove to avoid repeats
+            document.getElementById('sentence').innerText = picked;
+
+            if (pool.length === 0) {
+                document.getElementById('newBtn').disabled = true;
+            }
+        }
+
+        // Welcome overlay logic
+        const welcome = document.getElementById('welcome');
+        const continueBtn = document.getElementById('continueBtn');
+        continueBtn.addEventListener('click', () => {
+            welcome.classList.add('hidden');
+            // allow scroll if needed after dismiss
+            document.body.style.overflow = 'auto';
+        });
+    </script>
+</body>
+</html>
