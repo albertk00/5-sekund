@@ -19,7 +19,7 @@
         .overlay {
             position: fixed;
             inset: 0;
-            background: linear-gradient(180deg, #0b1b2b 0%, #123b4a 100%);
+            background: linear-gradient(180deg, #0b1b2b 0%, #0c3a2e 45%, #0a2a1f 100%); /* more Christmasy */
             color: #fff;
             display: flex;
             flex-direction: column;
@@ -54,7 +54,7 @@
             font-size: 1rem;
             border: none;
             border-radius: 10px;
-            background: #E53935;
+            background: linear-gradient(90deg, #E53935, #FF5252);
             color: #fff;
             box-shadow: 0 6px 20px rgba(229,57,53,0.45);
             cursor: pointer;
@@ -64,6 +64,14 @@
         }
         .cta:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(229,57,53,0.55); background: #D32F2F; }
         .cta:active { transform: translateY(0); }
+        .cta::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            box-shadow: 0 0 0px rgba(255,255,255,0);
+            animation: pulseGlow 2.4s ease-in-out infinite;
+        }
 
         /* Snowflakes */
         .snow { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
@@ -75,6 +83,43 @@
         }
         @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes fadeInUp { 0% { transform: translateY(12px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(229,57,53,0.55); }
+            50% { box-shadow: 0 0 16px rgba(229,57,53,0.85); }
+        }
+
+        /* Decorative branches */
+        .branch {
+            position: absolute;
+            top: -6px;
+            width: min(52vw, 620px);
+            height: 160px;
+            opacity: 0;
+            transform: translateY(-12px) scale(1.02);
+            filter: drop-shadow(0 6px 14px rgba(0,0,0,0.35));
+            animation: branchIn 900ms ease 250ms forwards, sway 7s ease-in-out 1.2s infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .branch.left { left: -10px; }
+        .branch.right { right: -10px; }
+        /* Ornaments twinkle */
+        .branch .orn { animation: twinkle 2.2s ease-in-out infinite; opacity: 0.85; }
+        .branch .orn:nth-child(2) { animation-delay: 0.6s; }
+        .branch .orn:nth-child(3) { animation-delay: 1.2s; }
+
+        @keyframes branchIn {
+            0% { opacity: 0; transform: translateY(12px) scale(0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes sway {
+            0%, 100% { transform: translateY(0) scale(1) rotate(0deg); }
+            50% { transform: translateY(2px) scale(1) rotate(0.6deg); }
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.65; filter: drop-shadow(0 0 0px rgba(255,255,255,0.25)); }
+            50% { opacity: 1; filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)); }
+        }
 
         /* Main app styles */
         #box {
@@ -97,6 +142,7 @@
 <body>
     <!-- Welcome overlay -->
     <div id="welcome" class="overlay">
+        <!-- Snowflakes background -->
         <div class="snow" aria-hidden="true">
             <!-- minimal flakes -->
             <span class="flake" style="left:5%; animation-duration: 8s; animation-delay: 0s;">✦</span>
@@ -107,6 +153,49 @@
             <span class="flake" style="left:80%; animation-duration: 8.5s; animation-delay: 1.2s;">❄</span>
             <span class="flake" style="left:92%; animation-duration: 7.5s; animation-delay: 0.7s;">✦</span>
         </div>
+
+        <!-- Decorative pine branches with ornaments -->
+        <svg class="branch left" viewBox="0 0 400 160" aria-hidden="true" preserveAspectRatio="none">
+            <!-- branch spine -->
+            <g stroke="#1b5e20" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.9">
+                <path d="M 0 60 C 110 25, 220 25, 380 70"/>
+            </g>
+            <!-- needles -->
+            <g fill="#2e7d32">
+                <rect x="10" y="50" width="170" height="10" rx="5" transform="rotate(-18 10 50)"/>
+                <rect x="40" y="68" width="180" height="10" rx="5" transform="rotate(-12 40 68)"/>
+                <rect x="80" y="84" width="170" height="10" rx="5" transform="rotate(-6 80 84)"/>
+                <rect x="130" y="96" width="160" height="10" rx="5" transform="rotate(2 130 96)"/>
+                <rect x="190" y="106" width="140" height="10" rx="5" transform="rotate(8 190 106)"/>
+            </g>
+            <!-- ornaments -->
+            <g>
+                <circle class="orn" cx="95"  cy="42" r="8" fill="#e53935"/>
+                <circle class="orn" cx="185" cy="56" r="8" fill="#ffca28"/>
+                <circle class="orn" cx="270" cy="78" r="8" fill="#29b6f6"/>
+            </g>
+        </svg>
+
+        <svg class="branch right" viewBox="0 0 400 160" aria-hidden="true" preserveAspectRatio="none">
+            <g transform="scale(-1,1) translate(-400,0)">
+                <g stroke="#1b5e20" stroke-width="10" stroke-linecap="round" fill="none" opacity="0.9">
+                    <path d="M 0 60 C 110 25, 220 25, 380 70"/>
+                </g>
+                <g fill="#2e7d32">
+                    <rect x="10" y="50" width="170" height="10" rx="5" transform="rotate(-18 10 50)"/>
+                    <rect x="40" y="68" width="180" height="10" rx="5" transform="rotate(-12 40 68)"/>
+                    <rect x="80" y="84" width="170" height="10" rx="5" transform="rotate(-6 80 84)"/>
+                    <rect x="130" y="96" width="160" height="10" rx="5" transform="rotate(2 130 96)"/>
+                    <rect x="190" y="106" width="140" height="10" rx="5" transform="rotate(8 190 106)"/>
+                </g>
+                <g>
+                    <circle class="orn" cx="95"  cy="42" r="8" fill="#e53935"/>
+                    <circle class="orn" cx="185" cy="56" r="8" fill="#ffca28"/>
+                    <circle class="orn" cx="270" cy="78" r="8" fill="#29b6f6"/>
+                </g>
+            </g>
+        </svg>
+
         <h1 class="title">Masz 5 sekund!</h1>
         <div class="subtitle">Świąteczna rozgrywka rodzinna</div>
         <button class="cta" id="continueBtn">Kontynuuj</button>
