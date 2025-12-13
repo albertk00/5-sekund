@@ -611,7 +611,7 @@
             "Wymień 3 przedmioty, które zabrałby Albert na bezludną wyspę",
             "Wymień 3 rzeczy, które można znaleźć w samochodzie Taty",
             "Wymień 3 rzeczy, które można znaleźć w samochodzie Mamy",
-            "Wymień 3 rzeczy, które można znaleźć w samochodzie Alberta","
+            "Wymień 3 rzeczy, które można znaleźć w samochodzie Alberta"
         ];
 
         // Shrinking pool to avoid repeats
@@ -796,9 +796,9 @@
         document.getElementById('clockBtn').addEventListener('click', startTimer);
 
         // Keep countdown text in sync after reset
-        const originalReset = resetGame;
+        const originalResetCountdown = resetGame;
         resetGame = function() {
-            originalReset();
+            originalResetCountdown();
             document.getElementById('countdown').innerText = '5s';
             const clockBtn = document.getElementById('clockBtn');
             clockBtn.classList.remove('clock-running', 'disabled');
@@ -907,9 +907,9 @@
         });
 
         // Reset deck should not clear points or queue; just refresh UI
-        const originalReset = resetGame;
+        const originalResetScoreboard = resetGame;
         resetGame = function() {
-            originalReset();
+            originalResetScoreboard();
             renderScoreboard();
             renderCurrentTurn();
             setCanAward(false);
