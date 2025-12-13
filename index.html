@@ -305,6 +305,71 @@
             50% { opacity: 1; filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)); }
         }
 
+        /* Players setup overlay */
+        .players-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9998;
+            background: rgba(0,0,0,0.25);
+            backdrop-filter: blur(2px);
+        }
+        .players-card {
+            width: 90%;
+            max-width: 480px;
+            padding: 16px;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #0b1b2b 0%, #0c3a2e 45%, #0a2a1f 100%);
+            border: 2px solid rgba(255,255,255,0.15);
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        }
+        .players-header { font-weight: 700; margin-bottom: 10px; }
+        .player-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .player-row input {
+            flex: 1;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.25);
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+        }
+        .players-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+        .players-actions button { padding: 8px 12px; border-radius: 8px; }
+
+        /* Current turn badge */
+        #currentTurn {
+            margin-top: 10px;
+            color: #ffca28;
+            font-weight: 700;
+        }
+        /* Award buttons */
+        #awardControls {
+            display: none;
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        #btnSuccess { background: linear-gradient(90deg, #2ecc71, #27ae60); }
+        #btnFail { background: linear-gradient(90deg, #e0e0e0, #bdbdbd); color: #222; }
+        /* Leaderboard */
+        #leaderboard {
+            margin-top: 10px;
+            color: #fff;
+            font-size: 0.95rem;
+        }
+        #leaderboard .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 8px;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 6px;
+            background: rgba(255,255,255,0.06);
+            margin-bottom: 4px;
+        }
     </style>
 </head>
 <body>
@@ -369,6 +434,20 @@
         <button class="cta" id="continueBtn">Kontynuuj</button>
     </div>
 
+    <!-- Players setup overlay -->
+    <div id="playersOverlay" class="players-overlay" aria-modal="true" role="dialog">
+        <div class="players-card">
+            <div class="players-header">Dodaj graczy (max 8)</div>
+            <div id="playersList">
+                <!-- dynamic input rows -->
+            </div>
+            <div class="players-actions">
+                <button id="addPlayerBtn">Dodaj gracza</button>
+                <button id="startGameBtn" class="cta" style="padding:8px 12px;">Start</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Counter badge -->
     <div id="counter">Pozostałe: 0</div>
 
@@ -384,6 +463,20 @@
             </button>
             <div id="countdown" class="countdown">5s</div>
         </div>
+
+        <!-- Current turn and award controls -->
+        <div id="currentTurn">Tura: —</div>
+        <div id="awardHint" style="display:none;">Przyznaj punkt (po zakończeniu timera)</div>
+        <div id="awardControls">
+            <button id="btnSuccess">Sukces (+1)</button>
+            <button id="btnFail">Nie udało (0)</button>
+        </div>
+
+        <!-- Leaderboard -->
+        <div id="leaderboard"></div>
+
+        <!-- Scoreboard -->
+        <div id="scoreboard"></div>
     </div>
 
     <script>
@@ -510,7 +603,15 @@
             "Wymień 3 przedmioty na studiach Stasia",
             "Wymień 3 przedmioty na studiach Misi",
             "Wymień 3 aktywności podczas wyjazdu na narty",
-            "Wymień 3 sposoby na szybkie sprzątanie po imprezie sylwestrowej"
+            "Wymień 3 sposoby na szybkie sprzątanie po imprezie sylwestrowej",
+            "Wymień 3 przedmioty, które zabrałby Stasiu na bezludną wyspę",
+            "Wymień 3 przedmioty, które zabrałaby Misia naa bezludną wyspę",
+            "Wymień 3 przedmioty, które zabrałby Tata na bezludną wyspę",
+            "Wymień 3 przedmioty, które zabrałaby Mama na bezludną wyspę",
+            "Wymień 3 przedmioty, które zabrałby Albert na bezludną wyspę",
+            "Wymień 3 rzeczy, które można znaleźć w samochodzie Taty",
+            "Wymień 3 rzeczy, które można znaleźć w samochodzie Mamy",
+            "Wymień 3 rzeczy, które można znaleźć w samochodzie Alberta","
         ];
 
         // Shrinking pool to avoid repeats
@@ -709,6 +810,114 @@
                 audioCtx.resume().catch(() => {});
             }
         };
+
+        // Queue state
+        let players = [];
+        const MAX_PLAYERS = 8;
+        let currentTurn = 0;
+        let canAward = false;
+
+        // Render current turn
+        function renderCurrentTurn() {
+            const el = document.getElementById('currentTurn');
+            if (players.length === 0) { el.innerText = 'Tura: —'; return; }
+            const p = players[currentTurn % players.length];
+            el.innerText = `Tura: ${p.name || 'Gracz ' + (currentTurn+1)}`;
+        }
+
+        // Advance turn (looped)
+        function nextTurn() {
+            if (players.length > 0) {
+                currentTurn = (currentTurn + 1) % players.length;
+                renderCurrentTurn();
+            }
+        }
+
+        // Scoreboard (unchanged structure, auto-updates points)
+        function renderScoreboard() {
+            const board = document.getElementById('scoreboard');
+            board.innerHTML = '';
+            players.forEach((p, i) => {
+                const item = document.createElement('div');
+                item.className = 'player-btn';
+                item.innerHTML = `<span class="player-name">${p.name || 'Gracz ' + (i+1)}</span><span class="player-points">${p.points}</span>`;
+                board.appendChild(item);
+            });
+            renderLeaderboard();
+        }
+
+        // Leaderboard (sorted by points desc)
+        function renderLeaderboard() {
+            const lb = document.getElementById('leaderboard');
+            const sorted = [...players].sort((a,b) => b.points - a.points);
+            lb.innerHTML = '<div style="font-weight:700; margin-bottom:6px;">Tabela wyników</div>';
+            sorted.forEach(p => {
+                lb.innerHTML += `<div class="row"><span>${p.name}</span><span>${p.points}</span></div>`;
+            });
+        }
+
+        // Players overlay control (keep existing, but set up turn after start)
+        // ...existing code for playersOverlay, addPlayerBtn, startGameBtn...
+        const startGameBtn = document.getElementById('startGameBtn');
+        startGameBtn.addEventListener('click', () => {
+            // ...existing player filtering...
+            currentTurn = 0;
+            renderScoreboard();
+            renderCurrentTurn();
+            // ...existing hide overlay...
+        });
+
+        // Award flow tied to timer end
+        function setCanAward(val) {
+            canAward = val;
+            document.getElementById('awardHint').style.display = val ? 'block' : 'none';
+            document.getElementById('awardControls').style.display = val ? 'flex' : 'none';
+        }
+
+        // Hook Losuj to require timer completion before awarding
+        const originalShowRandom = showRandom;
+        showRandom = function() {
+            originalShowRandom();
+            setCanAward(false);
+        };
+
+        // Enable awarding after timer finishes (countdown = 0s)
+        const countdownEl = document.getElementById('countdown');
+        const observer = new MutationObserver(() => {
+            if (countdownEl.innerText === '0s') {
+                setCanAward(true);
+            }
+        });
+        observer.observe(countdownEl, { childList: true });
+
+        // Award buttons: apply score to current player, then advance turn
+        document.getElementById('btnSuccess').addEventListener('click', () => {
+            if (!canAward || players.length === 0) return;
+            players[currentTurn].points += 1;
+            renderScoreboard();
+            setCanAward(false);
+            nextTurn();
+        });
+        document.getElementById('btnFail').addEventListener('click', () => {
+            if (!canAward || players.length === 0) return;
+            // no points
+            renderScoreboard();
+            setCanAward(false);
+            nextTurn();
+        });
+
+        // Reset deck should not clear points or queue; just refresh UI
+        const originalReset = resetGame;
+        resetGame = function() {
+            originalReset();
+            renderScoreboard();
+            renderCurrentTurn();
+            setCanAward(false);
+        };
+
+        // Initial UI
+        renderScoreboard();
+        renderCurrentTurn();
 
         // Welcome overlay logic
         const welcome = document.getElementById('welcome');
