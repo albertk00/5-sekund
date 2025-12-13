@@ -833,16 +833,10 @@
             }
         }
 
-        // Scoreboard (unchanged structure, auto-updates points)
+        // Scoreboard disabled (keep only pretty leaderboard)
         function renderScoreboard() {
             const board = document.getElementById('scoreboard');
-            board.innerHTML = '';
-            players.forEach((p, i) => {
-                const item = document.createElement('div');
-                item.className = 'player-btn';
-                item.innerHTML = `<span class="player-name">${p.name || 'Gracz ' + (i+1)}</span><span class="player-points">${p.points}</span>`;
-                board.appendChild(item);
-            });
+            if (board) board.innerHTML = '';
             renderLeaderboard();
         }
 
