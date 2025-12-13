@@ -468,8 +468,8 @@
         <div id="currentTurn">Tura: —</div>
         <div id="awardHint" style="display:none;">Przyznaj punkt (po zakończeniu timera)</div>
         <div id="awardControls">
-            <button id="btnSuccess">Sukces (+1)</button>
-            <button id="btnFail">Nie udało (0)</button>
+            <button id="btnSuccess" aria-label="Przyznaj punkt">+1</button>
+            <button id="btnFail" aria-label="Brak punktu">0</button>
         </div>
 
         <!-- Leaderboard -->
@@ -868,6 +868,8 @@
                 playersList.removeChild(row);
                 updateStartEnabled();
             });
+            const inputEl = row.querySelector('input');
+            inputEl.addEventListener('input', updateStartEnabled);
             playersList.appendChild(row);
             updateStartEnabled();
         }
